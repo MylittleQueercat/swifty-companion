@@ -1,0 +1,48 @@
+export type Skill = { id: number; name: string; level: number };
+export type Cursus = { id: number; name: string; level: number; skills: Skill[] };
+export type Project = { id: number; name: string; cursusIds: number[]; finalMark: number | null; validated: boolean | null; status: string; updatedAt: string | null };
+export type Profile = { login: string; name: string; email: string | null; location: string | null; wallet: number | null; evaluationPoints: number | null; image: string | null; cursus: Cursus[]; projects: Project[] };
+
+const record = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+const string = (value: unknown): string | null => typeof value === 'string' && value.trim() ? value : null;
+const number = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) ? value : null;
+
+export function parseProfile(value: unknown): Profile {
+  const raw = record(value);
+  const login = string(raw.login);
+  if (!login || !Array.isArray(raw.cursus_users) || !Array.isArray(raw.projects_users)) throw new Error('The profile data is incomplete.');
+  const image = record(raw.image);
+  const versions = record(image.versions);
+  return {
+    login,
+    name: string(raw.displayname) || string(raw.usual_full_name) || login,
+    email: string(raw.email),
+    location: string(raw.location),
+    wallet: number(raw.wallet),
+    evaluationPoints: number(raw.correction_point),
+    image: string(versions.large) || string(versions.medium) || string(image.link) || string(raw.image_url),
+    cursus: raw.cursus_users.map((item) => {
+      const row = record(item); const course = record(row.cursus);
+      return { id: number(row.cursus_id) ?? number(course.id) ?? 0, name: string(course.name) || 'Cursus', level: number(row.level) ?? 0,
+        skills: Array.isArray(row.skills) ? row.skills.map((skill) => { const s = record(skill); return { id: number(s.id) ?? 0, name: string(s.name) || 'Unknown skill', level: number(s.level) ?? 0 }; }) : [] };
+    }),
+    projects: raw.projects_users.map((item) => {
+      const row = record(item); const project = record(row.project);
+      return { id: number(row.id) ?? 0, name: string(project.name) || 'Unnamed project',
+        cursusIds: Array.isArray(row.cursus_ids) ? row.cursus_ids.filter((id): id is number => typeof id === 'number') : [],
+        finalMark: number(row.final_mark), validated: typeof row['validated?'] === 'boolean' ? row['validated?'] as boolean : null,
+        status: string(row.status) || 'unknown', updatedAt: string(row.updated_at) };
+    }),
+  };
+}
+
+export function projectState(project: Project): 'passed' | 'failed' | 'unfinished' {
+  if (project.status !== 'finished') return 'unfinished';
+  if (project.validated === true) return 'passed';
+  if (project.validated === false) return 'failed';
+  return 'unfinished';
+}
+
+export function skillPercent(level: number): number {
+  return Math.max(0, Math.min(100, Math.round((level - Math.floor(level)) * 100)));
+}

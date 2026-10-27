@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Swifty Companion",
+    "slug": "swifty-companion",
+    "scheme": "swiftycompanion",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "android": { "package": "com.swiftycompanion.directory" },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
