@@ -5,11 +5,11 @@
     "scheme": "swiftycompanion",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "icon": "./assets/icon-cyberpunk.png",
+    "icon": "./assets/icon-cyberpunk-v2.png",
     "android": {
       "package": "com.swiftycompanion.directory",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon-cyberpunk.png",
+        "foregroundImage": "./assets/icon-cyberpunk-v2.png",
         "backgroundColor": "#080B16"
       }
     },
