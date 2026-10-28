@@ -5,7 +5,14 @@
     "scheme": "swiftycompanion",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "android": { "package": "com.swiftycompanion.directory" },
+    "icon": "./assets/icon-cyberpunk.png",
+    "android": {
+      "package": "com.swiftycompanion.directory",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-cyberpunk.png",
+        "backgroundColor": "#080B16"
+      }
+    },
     "plugins": [
       "expo-router",
       "expo-status-bar"

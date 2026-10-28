@@ -25,6 +25,10 @@ export async function lookup(login: string): Promise<Profile> {
     const error = body && typeof body === 'object' && 'error' in body ? (body as { error?: { code?: string; message?: string } }).error : undefined;
     throw new LookupError(error?.code || 'API_ERROR', error?.message || 'The lookup failed. Please try again.');
   }
-  try { lastProfile = parseProfile(body); return lastProfile; }
+  try {
+    lastProfile = parseProfile(body);
+    lastProfile.imageUrls.unshift(`${baseUrl}/api/users/${encodeURIComponent(value)}/photo`);
+    return lastProfile;
+  }
   catch { throw new LookupError('MALFORMED_DATA', 'The profile data is incomplete.'); }
 }

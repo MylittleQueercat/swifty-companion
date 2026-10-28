@@ -1,7 +1,7 @@
 export type Skill = { id: number; name: string; level: number };
 export type Cursus = { id: number; name: string; level: number; skills: Skill[] };
 export type Project = { id: number; name: string; cursusIds: number[]; finalMark: number | null; validated: boolean | null; status: string; updatedAt: string | null };
-export type Profile = { login: string; name: string; email: string | null; location: string | null; wallet: number | null; evaluationPoints: number | null; image: string | null; cursus: Cursus[]; projects: Project[] };
+export type Profile = { login: string; name: string; email: string | null; mobile: string | null; location: string | null; wallet: number | null; evaluationPoints: number | null; imageUrls: string[]; cursus: Cursus[]; projects: Project[] };
 
 const record = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const string = (value: unknown): string | null => typeof value === 'string' && value.trim() ? value : null;
@@ -13,14 +13,17 @@ export function parseProfile(value: unknown): Profile {
   if (!login || !Array.isArray(raw.cursus_users) || !Array.isArray(raw.projects_users)) throw new Error('The profile data is incomplete.');
   const image = record(raw.image);
   const versions = record(image.versions);
+  const imageUrls = [versions.large, versions.medium, versions.small, versions.micro, image.link, raw.image_url]
+    .map(string).filter((url): url is string => !!url && /^https:\/\//i.test(url));
   return {
     login,
     name: string(raw.displayname) || string(raw.usual_full_name) || login,
     email: string(raw.email),
+    mobile: string(raw.mobile),
     location: string(raw.location),
     wallet: number(raw.wallet),
     evaluationPoints: number(raw.correction_point),
-    image: string(versions.large) || string(versions.medium) || string(image.link) || string(raw.image_url),
+    imageUrls: [...new Set(imageUrls)],
     cursus: raw.cursus_users.map((item) => {
       const row = record(item); const course = record(row.cursus);
       return { id: number(row.cursus_id) ?? number(course.id) ?? 0, name: string(course.name) || 'Cursus', level: number(row.level) ?? 0,

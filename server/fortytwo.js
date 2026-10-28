@@ -29,7 +29,14 @@ function createFortyTwoClient({ clientId, clientSecret, fetchImpl = fetch, now =
       } catch {
         throw new ApiError(502, 'NETWORK_ERROR', 'Could not contact 42 authentication.');
       }
-      if (!response.ok) throw new ApiError(502, 'AUTH_ERROR', '42 authentication rejected the application credentials.');
+      if (response.status === 400 || response.status === 401 || response.status === 403) {
+        throw new ApiError(502, 'AUTH_ERROR', '42 rejected the application credentials. Check the UID and secret in .env.');
+      }
+      if (response.status === 429) {
+        const raw = Number(response.headers.get('retry-after'));
+        throw new ApiError(429, 'RATE_LIMITED', '42 authentication is rate limited. Please try again shortly.', Number.isFinite(raw) && raw > 0 ? Math.min(raw, 3600) : 30);
+      }
+      if (!response.ok) throw new ApiError(502, 'AUTH_SERVICE_ERROR', `42 authentication is temporarily unavailable (HTTP ${response.status}).`);
       let data;
       try { data = await response.json(); } catch { throw new ApiError(502, 'MALFORMED_DATA', '42 authentication returned invalid data.'); }
       if (!data || typeof data.access_token !== 'string' || !Number.isFinite(Number(data.expires_in)) || Number(data.expires_in) <= 0) {
@@ -80,7 +87,25 @@ function createFortyTwoClient({ clientId, clientSecret, fetchImpl = fetch, now =
     throw new ApiError(502, 'AUTH_ERROR', '42 authentication could not be refreshed.');
   }
 
-  return { getUser };
+  async function getImage(imageUrl) {
+    let accessToken = await obtainToken();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await fetchImpl(imageUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (response.status === 401 && attempt === 0) {
+        token = undefined;
+        accessToken = await obtainToken(true);
+        continue;
+      }
+      if (!response.ok || !(response.headers.get('content-type') || '').startsWith('image/')) return null;
+      return { contentType: response.headers.get('content-type'), data: Buffer.from(await response.arrayBuffer()) };
+    }
+    return null;
+  }
+
+  return { getUser, getImage };
 }
 
 module.exports = { ApiError, createFortyTwoClient };

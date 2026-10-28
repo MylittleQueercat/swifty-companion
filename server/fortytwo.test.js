@@ -51,9 +51,16 @@ test('rejects invalid login without requesting a token', async () => {
   await assert.rejects(client.getUser('../me'), { code: 'INVALID_LOGIN' });
 });
 
-test('maps token auth failures and API network failures', async () => {
+test('distinguishes token credential rejection, rate limiting and service errors', async () => {
   const authClient = createFortyTwoClient({ clientId: 'id', clientSecret: 'secret', fetchImpl: async () => json(401, {}) });
   await assert.rejects(authClient.getUser('jdoe'), { code: 'AUTH_ERROR' });
+  const limitedClient = createFortyTwoClient({ clientId: 'id', clientSecret: 'secret', fetchImpl: async () => json(429, {}, { 'retry-after': '5' }) });
+  await assert.rejects(limitedClient.getUser('jdoe'), { code: 'RATE_LIMITED', retryAfter: 5 });
+  const unavailableClient = createFortyTwoClient({ clientId: 'id', clientSecret: 'secret', fetchImpl: async () => json(503, {}) });
+  await assert.rejects(unavailableClient.getUser('jdoe'), { code: 'AUTH_SERVICE_ERROR' });
+});
+
+test('maps API network failures', async () => {
   const networkClient = createFortyTwoClient({ clientId: 'id', clientSecret: 'secret', fetchImpl: async (url) => {
     if (url.endsWith('/oauth/token')) return json(200, { access_token: 'token', expires_in: 7200 });
     throw new Error('offline');
@@ -69,4 +76,17 @@ test('coalesces simultaneous token requests', async () => {
   } });
   await Promise.all([client.getUser('jdoe'), client.getUser('another')]);
   assert.equal(tokens, 1);
+});
+
+test('loads a photo with the cached bearer token', async () => {
+  let tokenRequests = 0;
+  const client = createFortyTwoClient({ clientId: 'id', clientSecret: 'secret', fetchImpl: async (url, options) => {
+    if (url.endsWith('/oauth/token')) { tokenRequests++; return json(200, { access_token: 'photo-token', expires_in: 7200 }); }
+    assert.equal(options.headers.Authorization, 'Bearer photo-token');
+    return new Response(Buffer.from([0xff, 0xd8, 0xff]), { status: 200, headers: { 'content-type': 'image/jpeg' } });
+  } });
+  const photo = await client.getImage('https://cdn.intra.42.fr/users/photo.jpg');
+  assert.equal(photo.contentType, 'image/jpeg');
+  assert.equal(photo.data.length, 3);
+  assert.equal(tokenRequests, 1);
 });
