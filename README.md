@@ -78,7 +78,7 @@ The current Android debug build uses port **8082**. Keep Metro and the API serve
 
 ### Install the Android app for the first time
 
-If the app is not on the emulator, or you updated native dependencies or the launcher icon, use these commands in place of step 3:
+If the app is not on the emulator, or you updated native dependencies, use these commands in place of step 3:
 
 ```sh
 . /home/hguo/sgoinfre/hguo/mobile-dev/env.sh
@@ -89,6 +89,12 @@ npm run android -- --port 8082
 ```
 
 This command builds the debug app, installs it, and starts Metro. Start the API server in a separate terminal.
+
+If you changed the launcher icon in `app.json` while an `android/` directory already exists, regenerate the Android resources before running the build command above:
+
+```sh
+npx expo prebuild --platform android --no-install
+```
 
 ## Check the project
 
