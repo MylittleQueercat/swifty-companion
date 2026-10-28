@@ -1,3 +1,4 @@
+// This file shows a student's profile, skills, and projects.
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Animated, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -15,13 +16,14 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(() => cachedProfile(login));
   const [error, setError] = useState('');
   const [courseId, setCourseId] = useState<number | null>(null);
-  const [imageIndex, setImageIndex] = useState(0);
   const [reveal] = useState(() => new Animated.Value(0));
 
+  // Show the profile with a short animation.
   useEffect(() => {
     if (profile) Animated.spring(reveal, { toValue: 1, useNativeDriver: true, tension: 45, friction: 8 }).start();
   }, [profile, reveal]);
 
+  // Get the profile if it is not in memory.
   useEffect(() => {
     let active = true;
     if (cachedProfile(login)) return;
@@ -29,21 +31,22 @@ export default function ProfileScreen() {
     return () => { active = false; };
   }, [login]);
 
-  useEffect(() => { setImageIndex(0); }, [profile?.login]);
-
+  // Use the first cursus until the user selects a different cursus.
   const selected = useMemo(() => profile?.cursus.find((course) => course.id === courseId) || profile?.cursus[0], [profile, courseId]);
+  // Show projects for the selected cursus. Put the newest projects first.
   const projects = useMemo(() => {
     if (!profile) return [];
     const filtered = selected ? profile.projects.filter((project) => project.cursusIds.length === 0 || project.cursusIds.includes(selected.id)) : profile.projects;
     return [...filtered].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
   }, [profile, selected]);
 
+  // Show the profile, a load message, or an error message.
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.nav}><Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back to search" style={styles.back}><Text style={styles.backArrow}>←</Text><Text style={styles.backText}>DIRECTORY</Text></Pressable><Pressable onPress={toggle} accessibilityRole="button" accessibilityLabel={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} style={styles.themeButton}><Text style={styles.themeButtonText}>{mode === 'dark' ? '☀ LIGHT' : '☾ DARK'}</Text></Pressable></View>
       {!profile ? <View style={styles.center}>{error ? <><Text style={styles.emptyTitle}>SIGNAL LOST</Text><Text style={styles.emptyText}>{error}</Text><Pressable onPress={() => router.back()} style={styles.returnButton}><Text style={styles.returnText}>Back to search</Text></Pressable></> : <><ActivityIndicator color={theme.accent} size="large" /><Text style={styles.emptyText}>Decrypting profile…</Text></>}</View> : <Animated.View style={{ opacity: reveal, transform: [{ translateY: reveal.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] }}>
         <View style={styles.profileHeader}>
-          <View style={styles.avatarWrap}>{profile.imageUrls[imageIndex] ? <Image key={profile.imageUrls[imageIndex]} source={{ uri: profile.imageUrls[imageIndex] }} style={styles.avatar} resizeMode="cover" accessibilityLabel={`${profile.name} profile picture`} onError={() => setImageIndex((index) => index + 1)} /> : <Text style={styles.avatarFallback}>{profile.login.slice(0, 2).toUpperCase()}</Text>}</View>
+          <Avatar key={profile.login} profile={profile} />
           <View style={styles.profileIntro}><Text style={styles.kicker}>◈ OPERATOR PROFILE  /  {profile.login.toUpperCase()}</Text><Text style={styles.name}>{profile.name}</Text><Text style={styles.handle}>@{profile.login}  {'//'}  CONNECTED</Text></View>
         </View>
         <View style={styles.rule} />
@@ -68,6 +71,14 @@ export default function ProfileScreen() {
       </Animated.View>}
     </ScrollView>
   </SafeAreaView>;
+}
+
+// Try each photo. Show the login letters if no photo works.
+function Avatar({ profile }: { profile: Profile }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
+  const [imageIndex, setImageIndex] = useState(0);
+  return <View style={styles.avatarWrap}>{profile.imageUrls[imageIndex] ? <Image key={profile.imageUrls[imageIndex]} source={{ uri: profile.imageUrls[imageIndex] }} style={styles.avatar} resizeMode="cover" accessibilityLabel={`${profile.name} profile picture`} onError={() => setImageIndex((index) => index + 1)} /> : <Text style={styles.avatarFallback}>{profile.login.slice(0, 2).toUpperCase()}</Text>}</View>;
 }
 
 function Stat({ label, value, wide, accent }: { label: string; value: string; wide?: boolean; accent?: boolean }) {

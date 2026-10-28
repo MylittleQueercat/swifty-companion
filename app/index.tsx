@@ -1,3 +1,4 @@
+// This file shows the student search screen.
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -15,6 +16,7 @@ export default function SearchScreen() {
   const [entrance] = useState(() => new Animated.Value(0));
   const [pulse] = useState(() => new Animated.Value(0.45));
 
+  // Start the screen animation and the light animation.
   useEffect(() => {
     Animated.timing(entrance, { toValue: 1, duration: 750, useNativeDriver: true }).start();
     const loop = Animated.loop(Animated.sequence([
@@ -25,6 +27,7 @@ export default function SearchScreen() {
     return () => loop.stop();
   }, [entrance, pulse]);
 
+  // Get the student profile and open the profile screen.
   async function search() {
     if (loading) return;
     setError(''); setLoading(true); Keyboard.dismiss();
@@ -33,6 +36,7 @@ export default function SearchScreen() {
     finally { setLoading(false); }
   }
 
+  // Show an error below the input if the search fails.
   return <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
     <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

@@ -1,3 +1,5 @@
+// This file gets access tokens, student profiles, and photos from 42.
+const { Buffer } = require('node:buffer');
 const API_ROOT = 'https://api.intra.42.fr';
 
 class ApiError extends Error {
@@ -9,11 +11,13 @@ class ApiError extends Error {
   }
 }
 
+// Create a client that keeps its access token in memory.
 function createFortyTwoClient({ clientId, clientSecret, fetchImpl = fetch, now = Date.now }) {
   let token;
   let expiresAt = 0;
   let tokenPromise;
 
+  // Use the saved token until it is close to its end time.
   async function obtainToken(force = false) {
     if (!force && token && now() < expiresAt - 60_000) return token;
     if (tokenPromise) return tokenPromise;
@@ -49,6 +53,7 @@ function createFortyTwoClient({ clientId, clientSecret, fetchImpl = fetch, now =
     try { return await tokenPromise; } finally { tokenPromise = undefined; }
   }
 
+  // Check the login and get the student profile from 42.
   async function getUser(login) {
     if (typeof login !== 'string' || !/^[a-zA-Z0-9_-]{1,32}$/.test(login.trim())) {
       throw new ApiError(400, 'INVALID_LOGIN', 'Enter a valid 42 login.');
@@ -66,6 +71,7 @@ function createFortyTwoClient({ clientId, clientSecret, fetchImpl = fetch, now =
         throw new ApiError(502, 'NETWORK_ERROR', 'Could not reach the 42 API.');
       }
       if (response.status === 401 && attempt === 0) {
+        // Get a new token and send the request one more time.
         token = undefined;
         accessToken = await obtainToken(true);
         continue;
@@ -87,6 +93,7 @@ function createFortyTwoClient({ clientId, clientSecret, fetchImpl = fetch, now =
     throw new ApiError(502, 'AUTH_ERROR', '42 authentication could not be refreshed.');
   }
 
+  // Get a photo with the same access token.
   async function getImage(imageUrl) {
     let accessToken = await obtainToken();
     for (let attempt = 0; attempt < 2; attempt++) {

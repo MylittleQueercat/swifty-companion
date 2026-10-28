@@ -1,7 +1,10 @@
+// This file tests the 42 API client with local responses.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const { Buffer } = require('node:buffer');
 const { createFortyTwoClient } = require('./fortytwo');
 
+// Use local responses to test the 42 API client.
 const json = (status, body, headers = {}) => new Response(JSON.stringify(body), { status, headers });
 const profile = { login: 'jdoe', cursus_users: [], projects_users: [] };
 
